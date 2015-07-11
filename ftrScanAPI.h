@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2003-2008 Futronic Technology Company Ltd. All rights reserved.
+Copyright (c) 2003-2013 Futronic Technology Company Ltd. All rights reserved.
 
 Abstract:
 
@@ -50,6 +50,19 @@ Definitions and prototypes for the Futronic Scanner API.
 #  define NULL 0
 #endif
 
+#if defined( __UNIX__ ) || defined( unix ) || defined( __APPLE__ )
+#include <sys/time.h>
+#include <sys/param.h>
+#include <stdlib.h>
+#ifndef min
+#define min(a, b)  (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef max
+#define max(a, b)  (((a) > (b)) ? (a) : (b))
+#endif
+#endif
+
 #ifndef ERROR_NOT_ENOUGH_MEMORY
 #define ERROR_NOT_ENOUGH_MEMORY 8
 #endif
@@ -76,6 +89,10 @@ Definitions and prototypes for the Futronic Scanner API.
 
 #ifndef ERROR_NO_MORE_ITEMS
 #define ERROR_NO_MORE_ITEMS 259
+#endif
+
+#ifndef ERROR_PORT_UNREACHABLE
+#define ERROR_PORT_UNREACHABLE 1234
 #endif
 
 #ifndef ERROR_NO_SYSTEM_RESOURCES
@@ -107,17 +124,35 @@ Definitions and prototypes for the Futronic Scanner API.
 #  define FTR_API_PREFIX
 #  define FTR_API       _far _pascal
 #endif
+#define FTR_CALLBACK    FTR_API
 
-typedef void * FTRHANDLE;
-typedef	unsigned char FTR_BYTE;
-typedef int FTR_BOOL;
-typedef	unsigned long FTR_DWORD;
-typedef	unsigned short FTR_WORD;
+typedef	char                FTR_INT8;
+typedef	short               FTR_INT16;
+typedef	int                 FTR_INT32;
+typedef	long long           FTR_INT64;
 
-typedef	void * FTR_PVOID;
-typedef	FTR_BOOL * FTR_PBOOL;
-typedef	FTR_BYTE * FTR_PBYTE;
-typedef	FTR_DWORD * FTR_PDWORD;
+typedef	unsigned char       FTR_UINT8;
+typedef	unsigned short      FTR_UINT16;
+typedef	unsigned int        FTR_UINT32;
+typedef	unsigned long long  FTR_UINT64;
+
+typedef void *              FTRHANDLE;
+typedef int                 FTR_BOOL;
+#if defined( __WIN32__ )
+typedef	BYTE                FTR_BYTE;
+typedef	WORD                FTR_WORD;
+typedef	DWORD               FTR_DWORD;
+#else
+typedef	FTR_UINT8           FTR_BYTE;
+typedef	FTR_UINT16          FTR_WORD;
+typedef	FTR_UINT32          FTR_DWORD;
+#endif
+
+typedef	void *              FTR_PVOID;
+typedef	FTR_BOOL *          FTR_PBOOL;
+typedef	FTR_BYTE *          FTR_PBYTE;
+typedef	FTR_WORD *          FTR_PWORD;
+typedef	FTR_DWORD *         FTR_PDWORD;
 
 #if defined( __cplusplus )
 extern "C" { /* assume C declarations for C++ */
@@ -138,10 +173,41 @@ extern "C" { /* assume C declarations for C++ */
 #define FTR_OPTIONS_SCALE_IMAGE                         0x00000010
 #define FTR_OPTIONS_IMPROVE_IMAGE                       0x00000020 /* for PIV compatible devices */
 #define FTR_OPTIONS_INVERT_IMAGE                        0x00000040
+#define FTR_OPTIONS_PREVIEW_MODE                        0x00000080
+#define FTR_OPTIONS_IMAGE_FORMAT_MASK                   0x00000700
+#define FTR_OPTIONS_IMAGE_FORMAT_1                      0x00000100
+#define FTR_OPTIONS_ELIMINATE_BACKGROUND                0x00000800
+#define FTR_OPTIONS_IMPROVE_BACKGROUND                  0x00001000
+
+#define FTR_GLOBAL_ENABLE_REMOTE_SESSION_DETECTION      0x00000001
+#define FTR_GLOBAL_SYNC_DIR                             0x00000002 /* for Android only */
+#define FTR_GLOBAL_USB_HOST_CONTEXT_VERSION             0x00000003 /* for Android only */
+
+#define FTR_GLOBAL_VALUE_REMOTE_SESSION_ENABLE          0x00000001
+#define FTR_GLOBAL_VALUE_REMOTE_SESSION_DISABLE         0x00000000
+
+#define FTR_GLOBAL_VALUE_USB_HOST_CONTEXT_VERSION_MAX   0x00000002
+
+#define FTR_LIGHT_NO_LIGHT                              0x00 /* Can not be combined with other flags */
+#define FTR_LIGHT_TURN_ON( x )                          (0x80 | (x))
+#define FTR_LIGHT_TURN_OFF( x )                         (0x7F & (x))
+#define FTR_LIGHT_MAIN_IFRED                            0x01
+#define FTR_LIGHT_ADDITIONAL_IFRED                      0x02
+#define FTR_LIGHT_BACK_IFRED                            0x04
+#define FTR_LIGHT_GREEN                                 0x08
+#define FTR_LIGHT_OFF_MAIN_IFRED                        FTR_LIGHT_TURN_OFF( FTR_LIGHT_MAIN_IFRED )
+#define FTR_LIGHT_OFF_ADDITIONAL_IFRED                  FTR_LIGHT_TURN_OFF( FTR_LIGHT_ADDITIONAL_IFRED )
+#define FTR_LIGHT_OFF_BACK_IFRED                        FTR_LIGHT_TURN_OFF( FTR_LIGHT_BACK_IFRED )
+#define FTR_LIGHT_OFF_GREEN                             FTR_LIGHT_TURN_OFF( FTR_LIGHT_GREEN )
+#define FTR_LIGHT_ON_MAIN_IFRED                         FTR_LIGHT_TURN_ON( FTR_LIGHT_MAIN_IFRED )
+#define FTR_LIGHT_ON_ADDITIONAL_IFRED                   FTR_LIGHT_TURN_ON( FTR_LIGHT_ADDITIONAL_IFRED )
+#define FTR_LIGHT_ON_BACK_IFRED                         FTR_LIGHT_TURN_ON( FTR_LIGHT_BACK_IFRED )
+#define FTR_LIGHT_ON_GREEN                              FTR_LIGHT_TURN_ON( FTR_LIGHT_GREEN )
 
 #define FTR_ERROR_BASE                                  0x20000000
 #define FTR_ERROR_CODE( x )                             (FTR_ERROR_BASE | (x))
 
+#define FTR_ERROR_NO_ERROR                              0
 #define FTR_ERROR_EMPTY_FRAME                           4306 /* ERROR_EMPTY */
 #define FTR_ERROR_MOVABLE_FINGER                        FTR_ERROR_CODE( 0x0001 )
 #define FTR_ERROR_NO_FRAME                              FTR_ERROR_CODE( 0x0002 )
@@ -149,6 +215,19 @@ extern "C" { /* assume C declarations for C++ */
 #define FTR_ERROR_HARDWARE_INCOMPATIBLE                 FTR_ERROR_CODE( 0x0004 )
 #define FTR_ERROR_FIRMWARE_INCOMPATIBLE                 FTR_ERROR_CODE( 0x0005 )
 #define FTR_ERROR_INVALID_AUTHORIZATION_CODE            FTR_ERROR_CODE( 0x0006 )
+#define FTR_ERROR_ROLL_NOT_STARTED                      FTR_ERROR_CODE( 0x0007 )
+#define FTR_ERROR_ROLL_PROGRESS_DATA                    FTR_ERROR_CODE( 0x0008 )
+#define FTR_ERROR_ROLL_TIMEOUT                          FTR_ERROR_CODE( 0x0009 )
+#define FTR_ERROR_ROLL_ABORTED                          FTR_ERROR_CODE( 0x000A )
+#define FTR_ERROR_ROLL_ALREADY_STARTED                  FTR_ERROR_CODE( 0x000B )
+#define FTR_ERROR_ROLL_PROGRESS_REMOVE_FINGER           FTR_ERROR_CODE( 0x000C )
+#define FTR_ERROR_ROLL_PROGRESS_PUT_FINGER              FTR_ERROR_CODE( 0x000D )
+#define FTR_ERROR_ROLL_PROGRESS_POST_PROCESSING         FTR_ERROR_CODE( 0x000E )
+#define FTR_ERROR_FINGER_IS_PRESENT                     FTR_ERROR_CODE( 0x000F )
+#define FTR_ERROR_NULL_PARAMETER                        FTR_ERROR_CODE( 0x0010 )
+#define FTR_ERROR_LIBUSB_ERROR                          FTR_ERROR_CODE( 0x0011 )
+#define FTR_ERROR_VERSION_NOT_SUPPORTED                 FTR_ERROR_CODE( 0x0012 )
+#define FTR_ERROR_BAD_CALLBACK_FUNCTION                 FTR_ERROR_CODE( 0x0013 )
 
 /* Other return codes are Windows-compatible */
 #define FTR_ERROR_NO_MORE_ITEMS                         ERROR_NO_MORE_ITEMS
@@ -162,6 +241,8 @@ extern "C" { /* assume C declarations for C++ */
 #define FTR_ERROR_NOT_SUPPORTED                         ERROR_NOT_SUPPORTED
 #define FTR_ERROR_WRITE_PROTECT                         ERROR_WRITE_PROTECT
 #define FTR_ERROR_MESSAGE_EXCEEDS_MAX_SIZE              ERROR_MESSAGE_EXCEEDS_MAX_SIZE
+
+#define FTR_ERROR_PORT_UNREACHABLE                      ERROR_PORT_UNREACHABLE
 
 #define FTR_CONST_DIODE_OFF                             ((FTR_BYTE)0)
 #define FTR_CONST_DIODE_ON                              ((FTR_BYTE)255)
@@ -184,6 +265,13 @@ extern "C" { /* assume C declarations for C++ */
 #define FTR_DEVICE_USB_2_0_TYPE_2                       4
 #define FTR_DEVICE_USB_2_0_TYPE_3                       5
 #define FTR_DEVICE_USB_2_0_TYPE_4                       6
+#define FTR_DEVICE_USB_2_0_TYPE_50                      7
+#define FTR_DEVICE_USB_2_0_TYPE_60                      8
+#define FTR_DEVICE_USB_2_0_TYPE_25                      9
+#define FTR_DEVICE_USB_2_0_TYPE_80W                     11
+#define FTR_DEVICE_USB_2_0_TYPE_90B                     12
+#define FTR_DEVICE_USB_2_0_TYPE_64                      15
+#define FTR_DEVICE_USB_2_0_TYPE_98                      210
 
 /*
 byDeviceCompatibility:
@@ -194,95 +282,119 @@ byDeviceCompatibility:
         4 - USB 2.0 device (SOI968)
         5 - USB 2.0 device (FS88 compatible - SOI968)
         6 - USB 2.0 device (FS90 compatible - PAS202)
+        7 - USB 2.0 device (FS50 compatible)
+        8 - USB 2.0 device (FS60 compatible)
+        9 - USB 2.0 device (FS25 compatible)
+       11 - USB 2.0 device (FS80 compatible - SOI968 + Prism w/o Lens)
+       12 - USB 2.0 device (FS90 compatible - GC0303 w/o PIV)
+       13 - USB 2.0 device (FS64 compatible)
+      210 - USB 2.0 device (FS98 compatible)
 */
 
 typedef struct FTR_PACKED __FTRSCAN_DEVICE_INFO 
 {
-        FTR_DWORD                           dwStructSize; /* [in, out] */
-        FTR_BYTE                            byDeviceCompatibility;
-        FTR_WORD                            wPixelSizeX;
-        FTR_WORD                            wPixelSizeY;
+    FTR_DWORD                           dwStructSize; /* [in, out] */
+    FTR_BYTE                            byDeviceCompatibility;
+    FTR_WORD                            wPixelSizeX;
+    FTR_WORD                            wPixelSizeY;
 } FTRSCAN_DEVICE_INFO, *PFTRSCAN_DEVICE_INFO;
 
 typedef struct FTR_PACKED __FTRSCAN_IMAGE_SIZE
 {
-        int                                 nWidth;
-        int                                 nHeight;
-        int                                 nImageSize;
+    int                                 nWidth;
+    int                                 nHeight;
+    int                                 nImageSize;
 } FTRSCAN_IMAGE_SIZE, *PFTRSCAN_IMAGE_SIZE;
 
 typedef struct FTR_PACKED __FTRSCAN_FAKE_REPLICA_PARAMETERS
 {
-        FTR_BOOL                            bCalculated;
-        int                                 nCalculatedSum1;
-        int                                 nCalculatedSumFuzzy;
-        int                                 nCalculatedSumEmpty;
-        int                                 nCalculatedSum2;
-        double                              dblCalculatedTremor;
-        double                              dblCalculatedValue;
+    FTR_BOOL                            bCalculated;
+    int                                 nCalculatedSum1;
+    int                                 nCalculatedSumFuzzy;
+    int                                 nCalculatedSumEmpty;
+    int                                 nCalculatedSum2;
+    double                              dblCalculatedTremor;
+    double                              dblCalculatedValue;
 } FTRSCAN_FAKE_REPLICA_PARAMETERS, *PFTRSCAN_FAKE_REPLICA_PARAMETERS;
 
 typedef struct FTR_PACKED __FTRSCAN_FAKE_REPLICA_BUFFER
 {
-        FTR_BOOL                            bCalculated;
-        int                                 nBuffers;
-        int                                 nWidth;
-        int                                 nHeight;
-        int                                 nSize;
-        FTR_PVOID                           pBuffers;
+    FTR_BOOL                            bCalculated;
+    int                                 nBuffers;
+    int                                 nWidth;
+    int                                 nHeight;
+    int                                 nSize;
+    FTR_PVOID                           pBuffers;
 } FTRSCAN_FAKE_REPLICA_BUFFER, *PFTRSCAN_FAKE_REPLICA_BUFFER;
 
 typedef struct FTR_PACKED __FTRSCAN_LFD_CONSTANTS
 {
-        int                                 nLMin;
-        int                                 nLMax;
-        int                                 nCMin;
-        int                                 nCMax;
-        int                                 nEEMin;
-        int                                 nEEMax;
+    int                                 nLMin;
+    int                                 nLMax;
+    int                                 nCMin;
+    int                                 nCMax;
+    int                                 nEEMin;
+    int                                 nEEMax;
 } FTRSCAN_LFD_CONSTANTS, *PFTRSCAN_LFD_CONSTANTS;
 
 typedef struct FTR_PACKED __FTRSCAN_FRAME_PARAMETERS
 {
-        int                                 nContrastOnDose2;
-        int                                 nContrastOnDose4;
-        int                                 nDose;
-        int                                 nBrightnessOnDose1;
-        int                                 nBrightnessOnDose2;
-        int                                 nBrightnessOnDose3;
-        int                                 nBrightnessOnDose4;
-        FTRSCAN_FAKE_REPLICA_PARAMETERS     FakeReplicaParams;
-        FTR_BYTE                            Reserved[64-sizeof(FTRSCAN_FAKE_REPLICA_PARAMETERS)];
+    int                                 nContrastOnDose2;
+    int                                 nContrastOnDose4;
+    int                                 nDose;
+    int                                 nBrightnessOnDose1;
+    int                                 nBrightnessOnDose2;
+    int                                 nBrightnessOnDose3;
+    int                                 nBrightnessOnDose4;
+    FTRSCAN_FAKE_REPLICA_PARAMETERS     FakeReplicaParams;
+    FTR_BYTE                            Reserved[64-sizeof(FTRSCAN_FAKE_REPLICA_PARAMETERS)];
 } FTRSCAN_FRAME_PARAMETERS, *PFTRSCAN_FRAME_PARAMETERS;
 
 typedef enum __FTRSCAN_INTERFACE_STATUS
 {
-        FTRSCAN_INTERFACE_STATUS_CONNECTED,
-        FTRSCAN_INTERFACE_STATUS_DISCONNECTED
+    FTRSCAN_INTERFACE_STATUS_CONNECTED,
+    FTRSCAN_INTERFACE_STATUS_DISCONNECTED
 } FTRSCAN_INTERFACE_STATUS, *PFTRSCAN_INTERFACE_STATUS;
 
 typedef struct FTR_PACKED __FTRSCAN_INTERFACES_LIST
 {
-        FTRSCAN_INTERFACE_STATUS            InterfaceStatus[FTR_MAX_INTERFACE_NUMBER];
+    FTRSCAN_INTERFACE_STATUS            InterfaceStatus[FTR_MAX_INTERFACE_NUMBER];
 } FTRSCAN_INTERFACES_LIST, *PFTRSCAN_INTERFACES_LIST;
 
 #define FTR_VERSION_UNKNOWN_VERSION         0xFFFF
 
 typedef struct FTR_PACKED __FTRSCAN_VERSION
 {
-        FTR_WORD                            wMajorVersionHi; 
-        FTR_WORD                            wMajorVersionLo; 
-        FTR_WORD                            wMinorVersionHi; 
-        FTR_WORD                            wMinorVersionLo; 
+    FTR_WORD                            wMajorVersionHi; 
+    FTR_WORD                            wMajorVersionLo; 
+    FTR_WORD                            wMinorVersionHi; 
+    FTR_WORD                            wMinorVersionLo; 
 } FTRSCAN_VERSION, *PFTRSCAN_VERSION;
 
 typedef struct FTR_PACKED __FTRSCAN_VERSION_INFO
 {
-        FTR_DWORD                           dwVersionInfoSize; /* [in, out] */
-        FTRSCAN_VERSION                     APIVersion;
-        FTRSCAN_VERSION                     HardwareVersion;
-        FTRSCAN_VERSION                     FirmwareVersion;
+    FTR_DWORD                           dwVersionInfoSize; /* [in, out] */
+    FTRSCAN_VERSION                     APIVersion;
+    FTRSCAN_VERSION                     HardwareVersion;
+    FTRSCAN_VERSION                     FirmwareVersion;
 } FTRSCAN_VERSION_INFO, *PFTRSCAN_VERSION_INFO;
+
+typedef struct FTR_PACKED __FTRSCAN_VAR_DOSE_EXTRA_PARAMS
+{
+    FTR_BYTE                            byNumberOfFramesMinusOne;
+    FTR_BYTE                            byReserved1;
+    FTR_BYTE                            byReserved2;
+    FTR_BYTE                            byReserved3;
+    FTR_BYTE                            byReserved4;
+} FTRSCAN_VAR_DOSE_EXTRA_PARAMS, *PFTRSCAN_VAR_DOSE_EXTRA_PARAMS;
+
+typedef struct FTR_PACKED __FTRPIPE_COMMAND_PACKET
+{
+    FTR_DWORD                           dwLabel;
+    FTR_DWORD                           dwInDataSize;
+    FTR_DWORD                           dwWaitDataSize;
+    FTR_DWORD                           dwOperationStatus;
+} FTRPIPE_COMMAND_PACKET, *PFTRPIPE_COMMAND_PACKET;
 
 #define FTR_SCANNER_FEATURE_LFD                         1
 #define FTR_SCANNER_FEATURE_DIODES                      2
@@ -291,6 +403,138 @@ typedef struct FTR_PACKED __FTRSCAN_VERSION_INFO
 #define FTR_SCANNER_FEATURE_LONG_IMAGE                  5
 #define FTR_SCANNER_FEATURE_IS_CALIBRATED               6
 #define FTR_SCANNER_FEATURE_IS_LFD_CALIBRATED           7
+#define FTR_SCANNER_FEATURE_ROLL                        8
+
+#define FTR_POWER_EVENT_SLEEP                           0x00000001
+#define FTR_POWER_EVENT_SESSION_DISCONNECT              0x00000002
+#define FTR_POWER_EVENT_SESSION_LOGOFF                  0x00000004
+#define FTR_POWER_EVENT_LOGGING_OFF                     0x00000008
+#define FTR_POWER_EVENT_SHUTDOWN                        0x00000010
+#define FTR_POWER_EVENT_LOCK                            0x00000020
+
+#define FTR_POWER_EVENT_ALL                             0xFFFFFFFF
+#define FTR_POWER_EVENT_DISABLE_ALL                     FTR_POWER_EVENT_ALL, 0
+#define FTR_POWER_EVENT_ENABLE_ALL                      FTR_POWER_EVENT_ALL, FTR_POWER_EVENT_ALL
+
+#define FTR_TIMEOUT_INFINITE                            0xFFFFFFFF 
+
+#define FTR_REGISTRY_INDEX_LUM_AVERAGE                  0
+
+#define FTR_PROPERTY_NUMBER_OF_IMAGE_SIZES              1
+#define FTR_PROPERTY_LFD_LEVEL                          2
+#define FTR_PROPERTY_LFD_SW_1_CALCULATED_DATA           3
+#define FTR_PROPERTY_LFD_SW_1_PARAM                     4
+#define FTR_PROPERTY_LFD_SW_1_RESERVED                  5
+#define FTR_PROPERTY_LFD_SW_2_CALCULATED_DATA           6
+#define FTR_PROPERTY_LFD_SW_2_PARAM                     7
+
+typedef struct FTR_PACKED __FTRSCAN_PROPERTY_NUMBER_OF_IMAGE_SIZES
+{
+    int                                 nNumberOfImagesSizes;
+} FTRSCAN_PROPERTY_NUMBER_OF_IMAGE_SIZES, *PFTRSCAN_PROPERTY_NUMBER_OF_IMAGE_SIZES;
+
+typedef struct FTR_PACKED __FTRSCAN_PROPERTY_LFD_LEVEL
+{
+    FTR_DWORD                           dwLfdLevel;
+} FTRSCAN_PROPERTY_LFD_LEVEL, *PFTRSCAN_PROPERTY_LFD_LEVEL;
+
+typedef struct FTR_PACKED _FTRSCAN_PROPERTY_LFD_SW_1_DATA
+{
+    FTR_DWORD                           dwStrength;
+} FTRSCAN_PROPERTY_LFD_SW_1_DATA, *PFTRSCAN_PROPERTY_LFD_SW_1_DATA;
+
+typedef struct FTR_PACKED _FTRSCAN_PROPERTY_LFD_SW_1_PARAM
+{
+    FTR_DWORD                           dwStrength;
+} FTRSCAN_PROPERTY_LFD_SW_1_PARAM, *PFTRSCAN_PROPERTY_LFD_SW_1_PARAM;
+
+typedef struct FTR_PACKED _FTRSCAN_PROPERTY_LFD_SW_2_DATA
+{
+    FTR_DWORD                           dwScore;
+} FTRSCAN_PROPERTY_LFD_SW_2_DATA, *PFTRSCAN_PROPERTY_LFD_SW_2_DATA;
+
+typedef struct FTR_PACKED _FTRSCAN_PROPERTY_LFD_SW_2_PARAM
+{
+    FTR_DWORD                           dwScore;
+} FTRSCAN_PROPERTY_LFD_SW_2_PARAM, *PFTRSCAN_PROPERTY_LFD_SW_2_PARAM;
+
+#define FTR_ROLL_DIRECTION_NOT_DEFINED                  0
+#define FTR_ROLL_DIRECTION_FROM_LEFT_TO_RIGHT           1
+#define FTR_ROLL_DIRECTION_FROM_RIGHT_TO_LEFT           2
+
+#define FTR_ROLL_FRAME_PARAM_FLAG_NOT_CALIBRATED        0x00000001
+#define FTR_ROLL_FRAME_PARAM_FLAG_INDEX                 0x00000002
+#define FTR_ROLL_FRAME_PARAM_FLAG_DOSE                  0x00000004
+#define FTR_ROLL_FRAME_PARAM_FLAG_CONRAST               0x00000008
+
+#define FTR_ROLL_RESULT_OK                              0
+#define FTR_ROLL_RESULT_REVERSE_ROLLING                 1
+#define FTR_ROLL_RESULT_TOO_FAST_ROLLING                2
+
+typedef struct FTR_PACKED __FTRSCAN_ROLL_FRAME_PARAMETERS
+{
+    FTR_DWORD                           dwSize;
+    FTR_DWORD                           dwFlags;
+    FTR_DWORD                           dwStatus;
+    FTR_DWORD                           dwRollingResult;
+    FTR_DWORD                           dwDirection;
+    FTR_DWORD                           dwFrameIndex;
+    FTR_DWORD                           dwFrameDose;
+    FTR_DWORD                           dwFrameContrast;
+    FTR_DWORD                           dwFrameTimeMs;
+} FTRSCAN_ROLL_FRAME_PARAMETERS, *PFTRSCAN_ROLL_FRAME_PARAMETERS;
+
+#define FTR_ROLL_CB_REASON_PUT_FINGER                   0x00000001
+#define FTR_ROLL_CB_REASON_REMOVE_FINGER                0x00000002
+#define FTR_ROLL_CB_REASON_PROCESSING                   0x00000003
+#define FTR_ROLL_CB_REASON_BEFORE_POSTPROCESSING        0x00000004
+#define FTR_ROLL_CB_REASON_POSTPROCESSING               0x00000005
+#define FTR_ROLL_CB_REASON_AFTER_POSTPROCESSING         0x00000006
+#define FTR_ROLL_CB_REASON_STARTED                      0x00000007
+#define FTR_ROLL_CB_REASON_ABORTED                      0x00000008
+#define FTR_ROLL_CB_REASON_KEEP_EMPTY                   0x00000009
+
+typedef struct FTR_PACKED __FTRSCAN_ROLL_CB_OPERATION_DIODES_STATUS
+{
+    FTR_BYTE byGreenDiodeStatus;
+    FTR_BYTE byRedDiodeStatus;
+} FTRSCAN_ROLL_CB_OPERATION_DIODES_STATUS, *PFTRSCAN_ROLL_CB_OPERATION_DIODES_STATUS;
+
+#define FTR_ROLL_CB_OPERATION_SET_DIODES_STATUS         0x00000001
+
+#define FTR_LFD_MODE_HW                                 0x00000001
+#define FTR_LFD_MODE_SW_1                               0x00000002
+#define FTR_LFD_MODE_SW_2                               0x00000004
+
+#define FTR_LFD_MODE_SW_1_MAX_STRENGTH                  9
+
+#define FTR_LFD_MODE_SW_2_MOST_LIKELY_TO_BE_FAKE        5
+
+#define FTR_LFD_LEVEL_1                                 FTR_LFD_MODE_HW  /* default */
+#define FTR_LFD_LEVEL_2                                 (FTR_LFD_MODE_HW | FTR_LFD_MODE_SW_1)
+#define FTR_LFD_LEVEL_3                                 (FTR_LFD_MODE_HW | FTR_LFD_MODE_SW_2)
+#define FTR_LFD_LEVEL_MAX                               (FTR_LFD_MODE_HW | FTR_LFD_MODE_SW_1 | FTR_LFD_MODE_SW_2)
+
+#ifdef __ANDROID_API__
+#include <jni.h>
+
+#define FTR_ANDROID_CTX_VERSION_1 (1)
+#define FTR_ANDROID_CTX_VERSION_2 (2)
+
+#define FTR_ANDROID_CTX_FLAG_GLB_DONE 0x00000001
+
+typedef struct __ANDROID_CTX
+{
+    jobject io_ctx;
+    jobject zero_field;
+    FTR_DWORD ctx_version;
+    FTR_DWORD ctx_flags;
+
+} ANDROID_CTX, *PANDROID_CTX;
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved);
+
+#endif
 
 #if defined(__WIN32__)
 #pragma pack(pop)
@@ -298,6 +542,8 @@ typedef struct FTR_PACKED __FTRSCAN_VERSION_INFO
 
 FTR_API_PREFIX FTRHANDLE FTR_API ftrScanOpenDevice();
 FTRHANDLE FTR_API ftrScanOpenDeviceOnInterface( int nInterface );
+FTR_API_PREFIX FTRHANDLE FTR_API ftrScanOpenDeviceWithIoContext( FTR_PVOID pContext );
+
 FTR_API_PREFIX void FTR_API ftrScanCloseDevice( FTRHANDLE ftrHandle );
 FTR_API_PREFIX FTR_BOOL FTR_API ftrScanSetOptions( FTRHANDLE ftrHandle, FTR_DWORD dwMask, FTR_DWORD dwFlags );
 FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetOptions( FTRHANDLE ftrHandle, FTR_PDWORD lpdwFlags );
@@ -306,7 +552,7 @@ FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetDeviceInfo( FTRHANDLE ftrHandle, PFTRS
 FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetInterfaces( PFTRSCAN_INTERFACES_LIST pInterfaceList );
 FTR_API_PREFIX FTR_BOOL FTR_API ftrSetBaseInterface( int nBaseInterface );
 FTR_API_PREFIX int FTR_API ftrGetBaseInterfaceNumber();
-FTR_API_PREFIX FTR_BOOL FTR_API ftrSetLoggingFacilityLevel( FTR_DWORD dwLogMask, FTR_DWORD dwLogLevel, char * lpFileName );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrSetLoggingFacilityLevel( FTR_DWORD dwLogMask, FTR_DWORD dwLogLevel, char *lpFileName );
 
 FTR_API_PREFIX FTR_DWORD FTR_API ftrScanGetLastError();
 FTR_API_PREFIX void FTR_API ftrScanSetLastError( FTR_DWORD dwErrCode );
@@ -329,9 +575,11 @@ FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetBacklightImage( FTRHANDLE ftrHandle, F
 FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetDarkImage( FTRHANDLE ftrHandle, FTR_PVOID pBuffer );
 FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetImageByVariableDose( FTRHANDLE ftrHandle, int nVariableDose, FTR_PVOID pBuffer );
 FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGet4in1Image( FTRHANDLE ftrHandle, FTR_PVOID pBuffer );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetImageByVariableDoseEx( FTRHANDLE ftrHandle, int nVariableDose, FTR_BYTE byLights, PFTRSCAN_VAR_DOSE_EXTRA_PARAMS pExtraParams, FTR_PVOID pBuffer );
 
 FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetRawImageSize( FTRHANDLE ftrHandle, PFTRSCAN_IMAGE_SIZE pImageSize );
 FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetRawImageByVariableDose( FTRHANDLE ftrHandle, int nVariableDose, FTR_PVOID pBuffer );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetRawBacklightImage( FTRHANDLE ftrHandle, FTR_PVOID pBuffer );
 
 FTR_API_PREFIX FTR_BOOL FTR_API ftrScanIsFingerPresent( FTRHANDLE ftrHandle, PFTRSCAN_FRAME_PARAMETERS pFrameParameters );
 FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetFrame( FTRHANDLE ftrHandle, FTR_PVOID pBuffer, PFTRSCAN_FRAME_PARAMETERS pFrameParameters );
@@ -366,11 +614,48 @@ FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetDiodesStatus( FTRHANDLE ftrHandle, FTR
 FTR_API_PREFIX FTR_BOOL FTR_API ftrScanSave7ControlBytes( FTRHANDLE ftrHandle, FTR_PVOID pBuffer, FTR_BOOL bBurnToFlash );
 FTR_API_PREFIX FTR_BOOL FTR_API ftrScanRestore7ControlBytes( FTRHANDLE ftrHandle, FTR_PVOID pBuffer );
 
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanRollStart( FTRHANDLE ftrHandle );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanRollStarWithVariableDose( FTRHANDLE ftrHandle, int nVariableDose );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanRollRawStart( FTRHANDLE ftrHandle );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanRollRawStarWithVariableDose( FTRHANDLE ftrHandle, int nVariableDose );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanRollAbort( FTRHANDLE ftrHandle, FTR_BOOL bSynchronous );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanRollGetImage( FTRHANDLE ftrHandle, FTR_PVOID pBuffer, FTR_DWORD dwMilliseconds );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanRollGetFrameParameters( FTRHANDLE ftrHandle, PFTRSCAN_ROLL_FRAME_PARAMETERS pFrameParameters, FTR_PVOID pBuffer, FTR_DWORD dwMilliseconds );
+typedef FTR_BOOL (FTR_CALLBACK *PFTRROLLFNCB)( FTR_PVOID pUserContext, FTR_DWORD dwRollCallbackReason, FTR_PVOID pFtrContext, FTR_PVOID pReasonCtx );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanRollSetCallBackFn( FTRHANDLE ftrHandle, PFTRROLLFNCB pUserCbFb, FTR_PVOID pUserContext );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanRollDoOperationFromCb( FTR_PVOID pFtrContext, FTR_DWORD dwRollCbOperation, FTR_PVOID pRollCbOperationParam );
+
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanChangeSystemNotification( FTR_DWORD dwMask, FTR_DWORD dwFlags );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGlobalSetOptions( FTR_DWORD dwOption, FTR_PVOID pOptionData );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGlobalGetOptions( FTR_DWORD dwOption, FTR_PVOID pOptionData );
+
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetStripImageSize( FTRHANDLE ftrHandle, PFTRSCAN_IMAGE_SIZE pImageSize );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetStripImageByVariableDose( FTRHANDLE ftrHandle, int nVariableDose, FTR_PVOID pBuffer );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetRegistryValues( FTRHANDLE ftrHandle, FTR_PVOID pBuffer );
+
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanConvertRawToFinalImage( FTRHANDLE ftrHandle, FTR_PVOID pRawImageBuffer, FTR_PVOID pFinalImageBuffer, int nDose );
+
 FTR_API_PREFIX FTR_BOOL FTR_API ftrSweepGetSlice( FTRHANDLE ftrHandle, FTR_PVOID pBuffer );
 FTR_API_PREFIX FTR_BOOL FTR_API ftrSweepGetMultipleSlices( FTRHANDLE ftrHandle, int nSlices, FTR_PVOID pBuffer );
 
 #define FTR_BLACKFIN_MAX_WRITE_DATA_LEN        4096
 FTR_API_PREFIX FTR_BOOL FTR_API ftrBlackfinDataExchange( FTRHANDLE ftrHandle, FTR_PVOID pWriteBuffer, int nWriteBufferLength, FTR_PVOID pReadBuffer, int nReadBufferLength );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanControlPin3( FTRHANDLE ftrHandle, FTR_DWORD *pdwParam1, FTR_DWORD dwParam2, FTR_DWORD dwPeriod );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetButtonState( FTRHANDLE ftrHandle, FTR_DWORD *pdwParam1 );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanMainLEDsTimeout( FTRHANDLE ftrHandle, FTR_DWORD *pwdParam1 ,FTR_BYTE byFlag );
+
+FTR_API_PREFIX void FTR_API ftrSetGlobalDeviceSync( FTR_BOOL fSet );
+
+FTR_API_PREFIX FTR_BOOL FTR_API ftrSweepGetSlice( FTRHANDLE ftrHandle, FTR_PVOID pBuffer );
+
+FTR_API_PREFIX FTR_BOOL FTR_API ftrInternalDeviceIoExchange( FTRHANDLE ftrHandle, FTR_PVOID pData );
+
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetProperty( FTRHANDLE ftrHandle, int nProperty, FTR_PVOID pPropertyData );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetImageSizes( FTRHANDLE ftrHandle, PFTRSCAN_IMAGE_SIZE pArrayOfImageSizes );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetImageOfSpecificSize( FTRHANDLE ftrHandle, int nVariableDose, FTR_BYTE byLights, int nWidth, int nHeight, FTR_PVOID pBuffer );
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanSetProperty( FTRHANDLE ftrHandle, int nProperty, FTR_PVOID pPropertyData );
+
+FTR_API_PREFIX FTR_BOOL FTR_API ftrScanGetPropertySize( FTRHANDLE ftrHandle, int nProperty, FTR_DWORD* propSize );
 
 #ifdef __cplusplus
 }
