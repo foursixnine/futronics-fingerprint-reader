@@ -1,0 +1,3 @@
+To actually compile sucessfully gtk_ex on ubuntu 14.04, i had to skip the makefile and use this
+
+gcc -Wno-deprecated-declarations  -I./ $(pkg-config gtk+-2.0 --cflags  gthread-2.0) gtk_ex.c -o gtk_ex $(pkg-config gtk+-2.0 --libs  gthread-2.0) ./libScanAPI.so
